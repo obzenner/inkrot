@@ -2,7 +2,7 @@
 name: docs-migrate
 description: Migrate existing documentation to docs-toolkit standards. Performs full repository scan, maps every markdown file to a schema, proposes directory structure and migration plan. Use when adopting docs-toolkit in a repo, when asked to "migrate docs", "standardize documentation", "set up docs-toolkit", or "organize docs".
 metadata:
-  version: "0.2.0"
+  version: "{{VERSION}}"
 ---
 
 # Skill: docs-migrate
@@ -63,27 +63,11 @@ Read all schemas from the plugin's `schemas/` directory. For each candidate file
 
 **Discovery defaults by type:**
 
-- **adr**: `decisions/`, `docs/decisions/`, `adrs/`, `docs/adrs/`
-- **explanation**: `topics/`, `docs/topics/`, `explanations/`, `docs/explanations/`
-- **learnings**: `learnings/`, `docs/learnings/`
-- **reference**: `references/`, `docs/references/`, `domain-knowledge/`, `docs/domain-knowledge/`
-- **rfc**: `rfcs/`, `docs/rfcs/`
-- **runbook**: `runbooks/`, `docs/runbooks/`
-- **spec**: `specs/`, `docs/specs/`
-- **tasks**: `tasks/`, `docs/tasks/`
+{{DISCOVERY_DEFAULTS}}
 
 **Content signal table:**
 
-| Pattern | Suggests |
-|---------|----------|
-| "Context and Problem Statement", "Decision Outcome" | Adr |
-| "Timeline", "Impact", "Root Cause", "Remediation", "Prevention" | Learnings (incident) |
-| "Context", "What Went Well", "What Didn't", "Action Items" | Learnings (retrospective) |
-| "Discovery", "Context", "Implication", "References" | Learnings (til) |
-| "Problem", "Proposal", "Alternatives", "Resolution" | Rfc |
-| "Purpose", "Prerequisites", "Steps", "Rollback", "Escalation" | Runbook |
-| "User Scenarios", "Requirements", "Success Criteria", "Assumptions" | Spec |
-| "Phases", "Task Items", "Dependencies" | Tasks |
+{{CLASSIFICATION_TABLE}}
 
 **If no schema matches (score too low):** classify as `explanation` (default for unstructured knowledge docs) or ask the user.
 

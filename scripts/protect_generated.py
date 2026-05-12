@@ -9,18 +9,18 @@ If so, outputs a deny decision pointing to the regeneration command.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
-GENERATED_FILES = {
-    "skills/create-document/SKILL.md",
-    "skills/create-document/assets/adr-template.md",
-    "skills/create-document/assets/rfc-template.md",
-    "skills/create-document/assets/spec-template.md",
-    "skills/create-document/assets/runbook-template.md",
-    "skills/create-document/assets/tasks-template.md",
-    "skills/create-document/assets/learnings-template.md",
-}
+GENERATED_PATTERNS = [
+    re.compile(r"^skills/[^/]+/SKILL\.md$"),
+    re.compile(r"^skills/create-document/assets/[a-z]+-template\.md$"),
+]
+
+
+def is_generated(relative: str) -> bool:
+    return any(pattern.match(relative) for pattern in GENERATED_PATTERNS)
 
 
 def main():
@@ -40,14 +40,14 @@ def main():
 
     relative = str(path).split(plugin_marker, 1)[1] if plugin_marker in str(path) else ""
 
-    if relative in GENERATED_FILES:
+    if is_generated(relative):
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "deny",
                 "permissionDecisionReason": (
                     f"'{relative}' is generated from schemas. "
-                    "Edit schemas/ and run `uv run scripts/gen_skills.py` to regenerate."
+                    "Edit the .tmpl file or schemas/ and run `uv run scripts/gen_skills.py` to regenerate."
                 ),
             }
         }

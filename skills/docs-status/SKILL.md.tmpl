@@ -2,7 +2,7 @@
 name: docs-status
 description: Change a document's status with enforcement of transition rules. Use when marking an ADR as accepted, superseding a decision, deprecating a runbook, or any status lifecycle change that requires cross-reference integrity.
 metadata:
-  version: "0.1.0"
+  version: "{{VERSION}}"
 ---
 
 # Skill: docs-status
@@ -30,14 +30,7 @@ Read the document's frontmatter to get current status and type.
 
 If not specified, ask. Show valid transitions for this doc type:
 
-| Type | Valid Statuses |
-|------|---------------|
-| Adr | accepted, deprecated, proposed, rejected, superseded |
-| Learnings | archived, draft, published |
-| Rfc | accepted, draft, open, rejected, withdrawn |
-| Runbook | active, deprecated, draft |
-| Spec | abandoned, approved, draft, implemented |
-| Tasks | abandoned, active, completed |
+{{STATUS_TRANSITIONS}}
 
 ### Step 3: Enforce Transition Rules
 

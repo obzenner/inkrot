@@ -37,25 +37,24 @@ def find_plugin_root() -> Path:
 
 
 def load_doc_schemas(schema_dir: Path) -> list[dict]:
-    schemas = []
-    for f in sorted(schema_dir.glob("*.json")):
-        schema = json.loads(f.read_text())
-        if schema["type"] != "skill":
-            schemas.append(schema)
-    return schemas
+    return [
+        schema
+        for f in sorted(schema_dir.glob("*.json"))
+        if (schema := json.loads(f.read_text()))["type"] != "skill"
+    ]
 
 
 def load_skill_schema(schema_dir: Path) -> dict:
-    path = schema_dir / "skill.json"
-    return json.loads(path.read_text())
+    return json.loads((schema_dir / "skill.json").read_text())
 
 
-# --- Template rendering ---
+# --- Placeholder renderers ---
 
 
 def render_doc_types_table(schemas: list[dict]) -> str:
     rows = ["| Type | Naming | Required Sections | Statuses |", "|------|--------|-------------------|----------|"]
-    for s in schemas:
+
+    def format_row(s: dict) -> str:
         doc_type = s["type"]
         naming = s["naming"]["description"]
         sections = ", ".join(sec["name"] for sec in s["sections"]["required"])
@@ -63,33 +62,93 @@ def render_doc_types_table(schemas: list[dict]) -> str:
             sections = "(subtype-dependent)"
         status_field = next((f for f in s["frontmatter"]["fields"] if f["name"] == "status"), None)
         statuses = ", ".join(sorted(status_field["values"])) if status_field else "N/A"
-        rows.append(f"| {doc_type} | `{naming}` | {sections} | {statuses} |")
-    return "\n".join(rows)
+        return f"| {doc_type} | `{naming}` | {sections} | {statuses} |"
+
+    return "\n".join(rows + [format_row(s) for s in schemas])
 
 
 def render_default_paths(schemas: list[dict]) -> str:
-    lines = []
-    for s in schemas:
-        doc_type = s["type"]
+    def format_type_defaults(s: dict) -> str:
         defaults = ", ".join(f"`{d}`" for d in s["discovery"]["defaults"])
-        lines.append(f"   - {doc_type}: {defaults}")
-    return "\n".join(lines)
+        return f"   - {s['type']}: {defaults}"
+
+    return "\n".join(format_type_defaults(s) for s in schemas)
 
 
 def render_supported_types(schemas: list[dict]) -> str:
     return ", ".join(s["type"] for s in schemas)
 
 
-def render_skill_md(tmpl_content: str, schemas: list[dict], version: str) -> str:
-    replacements = {
-        "{{DOC_TYPES_TABLE}}": render_doc_types_table(schemas),
-        "{{DEFAULT_PATHS}}": render_default_paths(schemas),
-        "{{SUPPORTED_TYPES}}": render_supported_types(schemas),
-        "{{VERSION}}": version,
-    }
-    result = tmpl_content
-    for placeholder, value in replacements.items():
-        result = result.replace(placeholder, value)
+def render_status_transitions(schemas: list[dict]) -> str:
+    rows = ["| Type | Valid Statuses |", "|------|---------------|"]
+
+    def format_row(s: dict) -> str | None:
+        status_field = next((f for f in s["frontmatter"]["fields"] if f["name"] == "status"), None)
+        if not status_field:
+            return None
+        statuses = ", ".join(sorted(status_field["values"]))
+        return f"| {s['type'].title()} | {statuses} |"
+
+    return "\n".join(rows + [row for s in schemas if (row := format_row(s))])
+
+
+def render_classification_table(schemas: list[dict]) -> str:
+    Signal = tuple[str, str]
+
+    def signals_from_sections(s: dict) -> list[Signal]:
+        required = s["sections"]["required"]
+        if not required:
+            return []
+        section_names = ", ".join(f'"{sec["name"]}"' for sec in required)
+        return [(section_names, s["type"].title())]
+
+    def signals_from_subtypes(s: dict) -> list[Signal]:
+        if "subtypes" not in s:
+            return []
+        return [
+            (
+                ", ".join(f'"{sec["name"]}"' for sec in info["required_sections"]),
+                f"{s['type'].title()} ({subtype})",
+            )
+            for subtype, info in s["subtypes"]["values"].items()
+        ]
+
+    all_signals: list[Signal] = [
+        signal
+        for s in schemas
+        for signal in signals_from_sections(s) + signals_from_subtypes(s)
+    ]
+
+    rows = ["| Pattern | Suggests |", "|---------|----------|"]
+    return "\n".join(rows + [f"| {pattern} | {suggests} |" for pattern, suggests in all_signals])
+
+
+def render_discovery_defaults(schemas: list[dict]) -> str:
+    def format_entry(s: dict) -> str:
+        dirs = ", ".join(f"`{d}/`" for d in s["discovery"]["defaults"])
+        return f"- **{s['type']}**: {dirs}"
+
+    return "\n".join(format_entry(s) for s in schemas)
+
+
+# --- Template rendering ---
+
+
+PLACEHOLDER_REGISTRY: dict[str, callable] = {
+    "{{DOC_TYPES_TABLE}}": render_doc_types_table,
+    "{{DEFAULT_PATHS}}": render_default_paths,
+    "{{SUPPORTED_TYPES}}": render_supported_types,
+    "{{STATUS_TRANSITIONS}}": render_status_transitions,
+    "{{CLASSIFICATION_TABLE}}": render_classification_table,
+    "{{DISCOVERY_DEFAULTS}}": render_discovery_defaults,
+}
+
+
+def render_template(tmpl_content: str, schemas: list[dict], version: str) -> str:
+    result = tmpl_content.replace("{{VERSION}}", version)
+    for placeholder, renderer in PLACEHOLDER_REGISTRY.items():
+        if placeholder in result:
+            result = result.replace(placeholder, renderer(schemas))
     return result
 
 
@@ -167,6 +226,13 @@ def read_current_version(skill_md_path: Path) -> str:
     return "0.1.0"
 
 
+# --- Skill discovery ---
+
+
+def discover_skill_templates(skills_root: Path) -> list[Path]:
+    return sorted(skills_root.glob("*/SKILL.md.tmpl"))
+
+
 # --- Main ---
 
 
@@ -178,46 +244,46 @@ def main():
 
     plugin_root = find_plugin_root()
     schema_dir = plugin_root / "schemas"
-    skills_dir = plugin_root / "skills" / "create-document"
-    assets_dir = skills_dir / "assets"
+    skills_root = plugin_root / "skills"
 
     if not schema_dir.is_dir():
         print(f"Error: Schema directory not found: {schema_dir}", file=sys.stderr)
         sys.exit(2)
 
     doc_schemas = load_doc_schemas(schema_dir)
-    tmpl_path = skills_dir / "SKILL.md.tmpl"
+    templates = discover_skill_templates(skills_root)
 
-    if not tmpl_path.exists():
-        print(f"Error: Template not found: {tmpl_path}", file=sys.stderr)
+    if not templates:
+        print("Error: No SKILL.md.tmpl files found", file=sys.stderr)
         sys.exit(2)
 
-    tmpl_content = tmpl_path.read_text()
-    skill_md_path = skills_dir / "SKILL.md"
-    current_version = read_current_version(skill_md_path)
+    all_outputs: dict[Path, str] = {}
 
-    generated_skill = render_skill_md(tmpl_content, doc_schemas, current_version)
+    for tmpl_path in templates:
+        skill_dir = tmpl_path.parent
+        skill_md_path = skill_dir / "SKILL.md"
+        current_version = read_current_version(skill_md_path)
+        tmpl_content = tmpl_path.read_text()
+        all_outputs[skill_md_path] = render_template(tmpl_content, doc_schemas, current_version)
 
-    generated_assets = {
-        f"{schema['type']}-template.md": generate_asset_template(schema)
-        for schema in doc_schemas
-    }
-
-    all_outputs = {skill_md_path: generated_skill}
-    for filename, content in generated_assets.items():
-        all_outputs[assets_dir / filename] = content
+    # Asset templates only for create-document
+    create_doc_dir = skills_root / "create-document"
+    assets_dir = create_doc_dir / "assets"
+    for schema in doc_schemas:
+        all_outputs[assets_dir / f"{schema['type']}-template.md"] = generate_asset_template(schema)
 
     if dry_run:
-        stale = []
-        for path, expected in all_outputs.items():
-            current = path.read_text() if path.exists() else ""
-            if current != expected:
-                stale.append(str(path.relative_to(plugin_root)))
+        stale = [
+            str(path.relative_to(plugin_root))
+            for path, expected in all_outputs.items()
+            if (path.read_text() if path.exists() else "") != expected
+        ]
         if stale:
             print(f"Stale files ({len(stale)}):")
             for s in stale:
                 print(f"  {s}")
             sys.exit(1)
+        print("All generated files are fresh.")
         sys.exit(0)
 
     assets_dir.mkdir(parents=True, exist_ok=True)
