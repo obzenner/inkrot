@@ -33,7 +33,7 @@ def find_plugin_root() -> Path:
     current = Path(__file__).parent.parent
     if (current / ".claude-plugin").is_dir():
         return current
-    return Path.cwd() / "plugins" / "docs-toolkit"
+    return Path.cwd() / "plugins" / "inkrot"
 
 
 def load_doc_schemas(schema_dir: Path) -> list[dict]:
@@ -319,12 +319,6 @@ def main():
     for schema in doc_schemas:
         all_outputs[assets_dir / f"{schema['type']}-template.md"] = generate_asset_template(schema)
 
-    # Root CLAUDE.md
-    root_tmpl = plugin_root / "CLAUDE.md.tmpl"
-    if root_tmpl.exists():
-        all_outputs[plugin_root / "CLAUDE.md"] = render_template(
-            root_tmpl.read_text(), doc_schemas, "", skills_root=skills_root
-        )
 
     if dry_run:
         stale = [
