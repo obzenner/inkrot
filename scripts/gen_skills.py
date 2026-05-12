@@ -131,6 +131,51 @@ def render_discovery_defaults(schemas: list[dict]) -> str:
     return "\n".join(format_entry(s) for s in schemas)
 
 
+def render_schema_count(schemas: list[dict]) -> str:
+    return str(len(schemas))
+
+
+def render_skills_table(schemas: list[dict], *, skills_root: Path) -> str:
+    import re
+
+    rows = ["| Skill | Description |", "|-------|-------------|"]
+
+    inline_placeholders = {
+        "{{SUPPORTED_TYPES}}": render_supported_types,
+        "{{SCHEMA_COUNT}}": render_schema_count,
+    }
+
+    def resolve_inline(text: str) -> str:
+        result = text
+        for ph, renderer in inline_placeholders.items():
+            if ph in result:
+                result = result.replace(ph, renderer(schemas))
+        return result
+
+    def parse_tmpl_frontmatter(tmpl_path: Path) -> tuple[str, str] | None:
+        content = tmpl_path.read_text()
+        match = re.search(r"^---\s*\n(.*?)\n---", content, re.DOTALL)
+        if not match:
+            return None
+        fm = match.group(1)
+        name = ""
+        desc = ""
+        for line in fm.splitlines():
+            if line.startswith("name:"):
+                name = line.split(":", 1)[1].strip()
+            elif line.startswith("description:"):
+                desc = resolve_inline(line.split(":", 1)[1].strip())
+        return (name, desc) if name else None
+
+    entries = [
+        parsed
+        for tmpl in sorted(skills_root.glob("*/SKILL.md.tmpl"))
+        if (parsed := parse_tmpl_frontmatter(tmpl))
+    ]
+
+    return "\n".join(rows + [f"| `{name}` | {desc} |" for name, desc in entries])
+
+
 # --- Template rendering ---
 
 
@@ -141,14 +186,17 @@ PLACEHOLDER_REGISTRY: dict[str, callable] = {
     "{{STATUS_TRANSITIONS}}": render_status_transitions,
     "{{CLASSIFICATION_TABLE}}": render_classification_table,
     "{{DISCOVERY_DEFAULTS}}": render_discovery_defaults,
+    "{{SCHEMA_COUNT}}": render_schema_count,
 }
 
 
-def render_template(tmpl_content: str, schemas: list[dict], version: str) -> str:
+def render_template(tmpl_content: str, schemas: list[dict], version: str, *, skills_root: Path | None = None) -> str:
     result = tmpl_content.replace("{{VERSION}}", version)
     for placeholder, renderer in PLACEHOLDER_REGISTRY.items():
         if placeholder in result:
             result = result.replace(placeholder, renderer(schemas))
+    if "{{SKILLS_TABLE}}" in result and skills_root:
+        result = result.replace("{{SKILLS_TABLE}}", render_skills_table(schemas, skills_root=skills_root))
     return result
 
 
@@ -264,13 +312,19 @@ def main():
         skill_md_path = skill_dir / "SKILL.md"
         current_version = read_current_version(skill_md_path)
         tmpl_content = tmpl_path.read_text()
-        all_outputs[skill_md_path] = render_template(tmpl_content, doc_schemas, current_version)
+        all_outputs[skill_md_path] = render_template(tmpl_content, doc_schemas, current_version, skills_root=skills_root)
 
     # Asset templates only for create-document
-    create_doc_dir = skills_root / "create-document"
-    assets_dir = create_doc_dir / "assets"
+    assets_dir = skills_root / "create-document" / "assets"
     for schema in doc_schemas:
         all_outputs[assets_dir / f"{schema['type']}-template.md"] = generate_asset_template(schema)
+
+    # Root CLAUDE.md
+    root_tmpl = plugin_root / "CLAUDE.md.tmpl"
+    if root_tmpl.exists():
+        all_outputs[plugin_root / "CLAUDE.md"] = render_template(
+            root_tmpl.read_text(), doc_schemas, "", skills_root=skills_root
+        )
 
     if dry_run:
         stale = [

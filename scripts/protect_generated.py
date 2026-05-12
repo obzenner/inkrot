@@ -16,6 +16,7 @@ from pathlib import Path
 GENERATED_PATTERNS = [
     re.compile(r"^skills/[^/]+/SKILL\.md$"),
     re.compile(r"^skills/create-document/assets/[a-z]+-template\.md$"),
+    re.compile(r"^CLAUDE\.md$"),
 ]
 
 
