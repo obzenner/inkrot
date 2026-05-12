@@ -2,14 +2,12 @@
 
 Schema-driven documentation validation plugin for Claude Code. Enforces structure, naming, frontmatter, and status lifecycle across {{SCHEMA_COUNT}} document types — all derived from JSON schemas as the single source of truth.
 
-## Quick Start
+## Installation
 
-1. Install as a Claude Code plugin (`.claude-plugin/plugin.json`)
-2. Create docs with `/new` (scaffolds valid structure automatically)
-3. Migrate existing docs with `/docs-migrate`
-4. Change document status with `/docs-status`
-
-Validation runs automatically on session start and stop via hooks.
+```
+/plugin marketplace add obzenner/inkrot
+/plugin install inkrot@inkrot
+```
 
 ## Document Types
 
@@ -39,29 +37,4 @@ hooks/hooks.json        ← Runtime enforcement
     ├── PreToolUse: protect_generated.py (block edits to generated files)
     ├── SessionStart: validate.py       (check docs on load)
     └── Stop: validate.py              (check docs on exit)
-```
-
-## Contributing
-
-### Add a new document type
-
-1. Create `schemas/<type>.json` following the schema structure
-2. Run `uv run scripts/gen_skills.py` — generates the asset template and updates all SKILL.md files
-
-### Add a new skill
-
-1. Create `skills/<name>/SKILL.md.tmpl` with placeholders for schema-derived content
-2. Add any new placeholder renderers to `gen_skills.py`
-3. Run `uv run scripts/gen_skills.py`
-
-### Modify a skill
-
-Edit the `.tmpl` file, never the generated `SKILL.md`. Run the generator after changes.
-
-### Validate
-
-```bash
-uv run scripts/validate.py --format text          # check all docs
-uv run scripts/validate.py <path> --format text   # check one file
-uv run scripts/gen_skills.py --dry-run            # check for stale generated files
 ```

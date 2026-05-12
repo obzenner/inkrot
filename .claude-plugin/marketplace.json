@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "inkrot",
+  "description": "Schema-driven documentation validation, creation, and migration.",
+  "owner": {
+    "name": "obzenner"
+  },
+  "plugins": [
+    {
+      "name": "inkrot",
+      "source": ".",
+      "description": "Schema-driven documentation validation, creation, and migration. Enforces structure via JSON schemas, detects doc rot, and blocks drift with hook-driven enforcement.",
+      "category": "quality"
+    }
+  ]
+}
