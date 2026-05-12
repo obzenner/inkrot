@@ -35,13 +35,15 @@ Both are enforcement gaps: the tools exist but nothing forces their use at the r
 
 Two repo-level hooks in `.claude/settings.json`, running on SessionStart and Stop. These are **not** plugin hooks — they apply only when working on the inkrot repo itself.
 
-### Hook 1: Stop — staleness gate
+### Hook 1: Stop — staleness advisory
 
-On every `Stop` event, run `check_freshness.py`. If generated files are stale or the version wasn't bumped, block session termination (`"continue": false`).
+On every `Stop` event, run `check_freshness.py`. If generated files are stale or the version wasn't bumped, emit plain text that gets injected as `additionalContext` — the agent sees it and can self-correct without user intervention.
+
+We explicitly do NOT use `"continue": false` because that blocks the session but the agent never sees the reason — only the user does. Plain text output is the mechanism that gives the agent visibility.
 
 ### Hook 2: SessionStart — freshness check on load
 
-On session start, run the same check. If the agent enters a session with already-stale files (e.g. someone edited a schema manually), it knows immediately. Advisory only (SessionStart cannot block).
+On session start, run the same check. If the agent enters a session with already-stale files (e.g. someone edited a schema manually), it knows immediately and can fix them.
 
 ### Script: `scripts/check_freshness.py`
 
@@ -53,9 +55,7 @@ Combines checks across both generators:
 
 Output:
 - If fresh → silent exit (no output)
-- If stale → structured message with fix instructions
-- On Stop: `{"continue": false, "stopReason": "..."}` to block termination
-- On SessionStart: plain text advisory
+- If stale → plain text with fix instructions (injected as additionalContext to the agent on both SessionStart and Stop)
 
 ### Version bump rules
 

@@ -119,12 +119,7 @@ def main():
         sys.exit(0)
 
     message = "\n\n".join(problems)
-
-    if event == "SessionStart":
-        print(message)
-        sys.exit(0)
-
-    print(json.dumps({"continue": False, "stopReason": message}))
+    print(message)
     sys.exit(0)
 
 
