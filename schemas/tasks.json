@@ -1,0 +1,38 @@
+{
+  "type": "tasks",
+  "naming": {
+    "pattern": "^TASK-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "TASK-slug.md (uppercase TASK prefix, lowercase kebab slug)",
+    "example": "TASK-implement-auth-flow.md"
+  },
+  "discovery": {
+    "config_key": "tasks",
+    "defaults": ["tasks", "docs/tasks"]
+  },
+  "frontmatter": {
+    "fields": [
+      {"name": "title", "type": "string", "required": true, "placeholder": "{{TITLE}}"},
+      {"name": "status", "type": "enum", "required": true, "values": ["active", "completed", "abandoned"]},
+      {"name": "depends_on", "type": "depends_on", "required": false},
+      {"name": "tags", "type": "array", "required": false},
+      {"name": "tracks", "type": "tracks", "required": true}
+    ]
+  },
+  "sections": {
+    "required": [
+      {"name": "Phases", "description": "Ordered groups of work (Setup, Foundation, Stories, Polish)"},
+      {"name": "Task Items", "description": "Checkboxed items with IDs, parallel markers, story labels"},
+      {"name": "Dependencies", "description": "Phase ordering and within-phase dependency declarations"}
+    ],
+    "recommended": []
+  },
+  "numbering": {
+    "enabled": false
+  },
+  "template": {
+    "initial_status": "active",
+    "filename_pattern": "TASK-{{SLUG}}.md",
+    "heading": "# {{TITLE}}",
+    "tracks_placeholder": "{{TRACKS_PATH}}"
+  }
+}

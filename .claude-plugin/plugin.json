@@ -1,0 +1,8 @@
+{
+  "name": "inkrot",
+  "description": "Schema-driven documentation validation, creation, and migration. Detects doc rot via staleness tracking, enforces structure via JSON schemas, and blocks drift with hook-driven enforcement. Supports ADRs, RFCs, specs, runbooks, tasks, learnings, explanations, and references.",
+  "version": "0.5.0",
+  "author": {
+    "name": "obzenner"
+  }
+}

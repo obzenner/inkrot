@@ -1,0 +1,44 @@
+{
+  "type": "rfc",
+  "naming": {
+    "pattern": "^RFC-(\\d{4,})-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "RFC-NNNN-slug.md (uppercase RFC prefix, zero-padded number, lowercase kebab slug)",
+    "example": "RFC-0001-hook-driven-validation.md"
+  },
+  "discovery": {
+    "config_key": "rfcs",
+    "defaults": ["rfcs", "docs/rfcs"]
+  },
+  "frontmatter": {
+    "fields": [
+      {"name": "number", "type": "integer", "required": true, "placeholder": "{{NUMBER}}"},
+      {"name": "title", "type": "string", "required": true, "placeholder": "{{TITLE}}"},
+      {"name": "status", "type": "enum", "required": true, "values": ["draft", "open", "accepted", "rejected", "withdrawn"]},
+      {"name": "date", "type": "date", "required": true, "placeholder": "{{DATE}}"},
+      {"name": "authors", "type": "array", "required": true, "placeholder": "{{AUTHORS}}"},
+      {"name": "depends_on", "type": "depends_on", "required": false},
+      {"name": "tags", "type": "array", "required": false},
+      {"name": "tracks", "type": "tracks", "required": true}
+    ]
+  },
+  "sections": {
+    "required": [
+      {"name": "Problem", "description": "What problem does this RFC address?"},
+      {"name": "Proposal", "description": "What is the proposed solution?"},
+      {"name": "Alternatives", "description": "What other approaches were considered?"},
+      {"name": "Resolution", "description": "What was decided?"}
+    ],
+    "recommended": []
+  },
+  "numbering": {
+    "enabled": true,
+    "field": "number",
+    "filename_group": 1
+  },
+  "template": {
+    "initial_status": "draft",
+    "filename_pattern": "RFC-{{NUMBER}}-{{SLUG}}.md",
+    "heading": "# RFC-{{NUMBER}}: {{TITLE}}",
+    "tracks_placeholder": "{{TRACKS_PATH}}"
+  }
+}

@@ -1,0 +1,87 @@
+---
+name: docs-status
+description: Change a document's status with enforcement of transition rules. Use when marking an ADR as accepted, superseding a decision, deprecating a runbook, or any status lifecycle change that requires cross-reference integrity.
+metadata:
+  version: "0.1.0"
+---
+
+# Skill: docs-status
+
+## Purpose
+
+Transition a document's status with enforcement rules — certain transitions require references (superseded needs a replacement doc), and the transition must be valid for the doc type.
+
+## Trigger
+
+- User says "accept this ADR", "mark as accepted", "supersede ADR-0001"
+- User says "deprecate this runbook", "mark spec as implemented"
+- User invokes `/docs-status`
+
+## Workflow
+
+### Step 1: Identify Document
+
+If not obvious from context, ask:
+- Which document? (path or identifier like "ADR-0001")
+
+Read the document's frontmatter to get current status and type.
+
+### Step 2: Determine Target Status
+
+If not specified, ask. Show valid transitions for this doc type:
+
+| Type | Valid Statuses |
+|------|---------------|
+| ADR | proposed, accepted, deprecated, superseded, rejected |
+| RFC | draft, open, accepted, rejected, withdrawn |
+| Spec | draft, approved, implemented, abandoned |
+| Runbook | active, deprecated, draft |
+| Tasks | active, completed, abandoned |
+| Learnings | draft, published, archived |
+
+### Step 3: Enforce Transition Rules
+
+Before applying the change, check:
+
+**Superseded (ADR only):**
+- MUST provide a reference to the superseding document
+- Ask: "Which document supersedes this one?"
+- Add the reference to frontmatter `references` array
+- Verify the referenced document exists
+
+**Deprecated (ADR, Runbook):**
+- SHOULD provide a reason or replacement reference
+- Ask: "Why is this being deprecated? Is there a replacement?"
+- If replacement exists, add to `references`
+
+**Implemented (Spec):**
+- SHOULD reference the implementation (PR, commit, or tracked path)
+- Ask: "Where was this implemented?"
+- Update `tracks` with the implementation path if provided
+
+**Completed (Tasks):**
+- Verify all task items are checked (`[x]`)
+- If unchecked items remain, warn: "N tasks are incomplete. Mark as completed anyway?"
+
+### Step 4: Apply Change
+
+1. Update `status` field in frontmatter
+2. Add references if required by the transition
+3. Update `tracks.last_verified` to today (status change = doc was reviewed)
+
+### Step 5: Validate
+
+Run validation on the modified file:
+
+```bash
+uv run "${CLAUDE_PLUGIN_ROOT}/scripts/validate.py" <file_path> --format text
+```
+
+If errors: fix before reporting success.
+
+## Error Handling
+
+- Invalid status for doc type → show valid options
+- Superseded without reference → block until reference provided
+- Referenced document doesn't exist → error, ask user to create it first or provide correct path
+- Document has no frontmatter → can't change status, suggest running docs-migrate first

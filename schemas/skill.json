@@ -1,0 +1,44 @@
+{
+  "type": "skill",
+  "source": "agentskills specification",
+  "description": "Schema for SKILL.md files per the Agent Skills spec. Used by gen_skills.py to produce valid skill files.",
+  "frontmatter": {
+    "fields": [
+      {"name": "name", "type": "string", "required": true, "constraints": {"max_length": 64, "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "must_match_directory": true}},
+      {"name": "description", "type": "string", "required": true, "constraints": {"max_length": 1024}},
+      {"name": "license", "type": "string", "required": false},
+      {"name": "compatibility", "type": "string", "required": false, "constraints": {"max_length": 500}},
+      {"name": "allowed-tools", "type": "string", "required": false},
+      {"name": "metadata", "type": "object", "required": false, "reserved_keys": {
+        "version": {
+          "format": "semver",
+          "description": "Agent-determined version based on diff analysis. PATCH: wording/typo. MINOR: new capability, added type. MAJOR: breaking behavior change.",
+          "initial": "0.1.0"
+        }
+      }}
+    ]
+  },
+  "body": {
+    "max_lines": 500,
+    "recommended_sections": ["Purpose", "Trigger", "Workflow", "Error Handling"]
+  },
+  "directories": {
+    "scripts": {"description": "Executable code the agent can run", "optional": true},
+    "references": {"description": "Documentation loaded on demand", "optional": true},
+    "assets": {"description": "Templates, static resources", "optional": true}
+  },
+  "progressive_disclosure": {
+    "tier_1": "name + description (~100 tokens) — loaded at startup for all skills",
+    "tier_2": "SKILL.md body (<5000 tokens recommended) — loaded on activation",
+    "tier_3": "scripts/, references/, assets/ — loaded only when referenced"
+  },
+  "generation": {
+    "source_template": "SKILL.md.tmpl",
+    "output": "SKILL.md",
+    "placeholders": {
+      "DOC_TYPES_TABLE": "Markdown table derived from all doc type schemas (type, naming, sections, statuses)",
+      "DEFAULT_PATHS": "List of default directories per type from discovery.defaults in each schema",
+      "SUPPORTED_TYPES": "Comma-separated type names for the description field"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "type": "spec",
+  "naming": {
+    "pattern": "^SPEC-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "SPEC-slug.md (uppercase SPEC prefix, lowercase kebab slug)",
+    "example": "SPEC-user-authentication.md"
+  },
+  "discovery": {
+    "config_key": "specs",
+    "defaults": ["specs", "docs/specs"]
+  },
+  "frontmatter": {
+    "fields": [
+      {"name": "title", "type": "string", "required": true, "placeholder": "{{TITLE}}"},
+      {"name": "status", "type": "enum", "required": true, "values": ["draft", "approved", "implemented", "abandoned"]},
+      {"name": "date", "type": "date", "required": true, "placeholder": "{{DATE}}"},
+      {"name": "depends_on", "type": "depends_on", "required": false},
+      {"name": "branch", "type": "string", "required": false},
+      {"name": "tags", "type": "array", "required": false},
+      {"name": "tracks", "type": "tracks", "required": true}
+    ]
+  },
+  "sections": {
+    "required": [
+      {"name": "User Scenarios", "description": "Prioritized user journeys with acceptance scenarios"},
+      {"name": "Requirements", "description": "Numbered functional requirements (FR-001, FR-002...)"},
+      {"name": "Success Criteria", "description": "Measurable outcomes (SC-001, SC-002...)"},
+      {"name": "Assumptions", "description": "Explicit assumptions about scope and environment"}
+    ],
+    "recommended": []
+  },
+  "numbering": {
+    "enabled": false
+  },
+  "template": {
+    "initial_status": "draft",
+    "filename_pattern": "SPEC-{{SLUG}}.md",
+    "heading": "# {{TITLE}}",
+    "tracks_placeholder": "{{TRACKS_PATH}}"
+  }
+}

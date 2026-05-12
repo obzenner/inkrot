@@ -1,0 +1,69 @@
+{
+  "type": "learnings",
+  "naming": {
+    "pattern": "^LEARNING-(\\d{4,})-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "LEARNING-NNNN-slug.md (uppercase LEARNING prefix, zero-padded number, lowercase kebab slug)",
+    "example": "LEARNING-0001-database-connection-pooling.md"
+  },
+  "discovery": {
+    "config_key": "learnings",
+    "defaults": ["learnings", "docs/learnings"]
+  },
+  "frontmatter": {
+    "fields": [
+      {"name": "number", "type": "integer", "required": true, "placeholder": "{{NUMBER}}"},
+      {"name": "subtype", "type": "enum", "required": true, "values": ["incident", "retrospective", "til"], "placeholder": "{{SUBTYPE}}"},
+      {"name": "title", "type": "string", "required": true, "placeholder": "{{TITLE}}"},
+      {"name": "status", "type": "enum", "required": true, "values": ["draft", "published", "archived"]},
+      {"name": "date", "type": "date", "required": true, "placeholder": "{{DATE}}"},
+      {"name": "depends_on", "type": "depends_on", "required": false},
+      {"name": "tags", "type": "array", "required": false},
+      {"name": "tracks", "type": "tracks", "required": true}
+    ]
+  },
+  "sections": {
+    "required": [],
+    "recommended": []
+  },
+  "subtypes": {
+    "field": "subtype",
+    "values": {
+      "incident": {
+        "required_sections": [
+          {"name": "Timeline", "description": "Chronological sequence of events"},
+          {"name": "Impact", "description": "What was affected and how severely"},
+          {"name": "Root Cause", "description": "Why did this happen?"},
+          {"name": "Remediation", "description": "What was done to fix it?"},
+          {"name": "Prevention", "description": "What changes prevent recurrence?"}
+        ]
+      },
+      "retrospective": {
+        "required_sections": [
+          {"name": "Context", "description": "What project/initiative is this about?"},
+          {"name": "What Went Well", "description": "Successes to repeat"},
+          {"name": "What Didn't", "description": "Problems to address"},
+          {"name": "Action Items", "description": "Concrete next steps with owners"}
+        ]
+      },
+      "til": {
+        "required_sections": [
+          {"name": "Discovery", "description": "What was learned?"},
+          {"name": "Context", "description": "Where/when did this come up?"},
+          {"name": "Implication", "description": "Why does it matter? What changes?"},
+          {"name": "References", "description": "Links to sources, docs, code"}
+        ]
+      }
+    }
+  },
+  "numbering": {
+    "enabled": true,
+    "field": "number",
+    "filename_group": 1
+  },
+  "template": {
+    "initial_status": "draft",
+    "filename_pattern": "LEARNING-{{NUMBER}}-{{SLUG}}.md",
+    "heading": "# {{TITLE}}",
+    "tracks_placeholder": "{{TRACKS_PATH}}"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "type": "explanation",
+  "naming": {
+    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "slug.md (lowercase kebab, no prefix)",
+    "example": "authentication-flow.md"
+  },
+  "discovery": {
+    "config_key": "explanations",
+    "defaults": ["topics", "docs/topics", "explanations", "docs/explanations"]
+  },
+  "frontmatter": {
+    "fields": [
+      {"name": "title", "type": "string", "required": true, "placeholder": "{{TITLE}}"},
+      {"name": "date", "type": "date", "required": true, "placeholder": "{{DATE}}"},
+      {"name": "depends_on", "type": "depends_on", "required": false},
+      {"name": "tags", "type": "array", "required": false},
+      {"name": "tracks", "type": "tracks", "required": true}
+    ]
+  },
+  "sections": {
+    "required": [],
+    "recommended": []
+  },
+  "numbering": {
+    "enabled": false
+  },
+  "template": {
+    "initial_status": null,
+    "filename_pattern": "{{SLUG}}.md",
+    "heading": "# {{TITLE}}",
+    "tracks_placeholder": "{{TRACKS_PATH}}"
+  }
+}

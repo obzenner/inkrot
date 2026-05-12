@@ -1,0 +1,47 @@
+{
+  "type": "adr",
+  "naming": {
+    "pattern": "^(\\d{4,})-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "NNNN-slug.md (zero-padded number, lowercase kebab)",
+    "example": "0001-use-postgres.md"
+  },
+  "discovery": {
+    "config_key": "decisions",
+    "defaults": ["decisions", "docs/decisions", "adrs", "docs/adrs"]
+  },
+  "frontmatter": {
+    "fields": [
+      {"name": "number", "type": "integer", "required": true, "placeholder": "{{NUMBER}}"},
+      {"name": "title", "type": "string", "required": true, "placeholder": "{{TITLE}}"},
+      {"name": "status", "type": "enum", "required": true, "values": ["proposed", "accepted", "deprecated", "superseded", "rejected"]},
+      {"name": "date", "type": "date", "required": true, "placeholder": "{{DATE}}"},
+      {"name": "decision-makers", "type": "array", "required": false},
+      {"name": "consulted", "type": "array", "required": false},
+      {"name": "informed", "type": "array", "required": false},
+      {"name": "tags", "type": "array", "required": false},
+      {"name": "depends_on", "type": "depends_on", "required": false},
+      {"name": "tracks", "type": "tracks", "required": true}
+    ]
+  },
+  "sections": {
+    "required": [
+      {"name": "Context and Problem Statement", "description": "What is the issue and why does it need a decision?"},
+      {"name": "Decision Outcome", "description": "What was decided and why?"}
+    ],
+    "recommended": [
+      {"name": "Considered Options", "description": "What alternatives were evaluated?"},
+      {"name": "Decision Drivers", "description": "What forces influence this decision?"}
+    ]
+  },
+  "numbering": {
+    "enabled": true,
+    "field": "number",
+    "filename_group": 1
+  },
+  "template": {
+    "initial_status": "proposed",
+    "filename_pattern": "{{NUMBER}}-{{SLUG}}.md",
+    "heading": "# {{TITLE}}",
+    "tracks_placeholder": "{{TRACKS_PATH}}"
+  }
+}

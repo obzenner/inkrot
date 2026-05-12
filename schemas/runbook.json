@@ -1,0 +1,42 @@
+{
+  "type": "runbook",
+  "naming": {
+    "pattern": "^RUNBOOK-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$",
+    "description": "RUNBOOK-slug.md (uppercase RUNBOOK prefix, lowercase kebab slug)",
+    "example": "RUNBOOK-deploy-production.md"
+  },
+  "discovery": {
+    "config_key": "runbooks",
+    "defaults": ["runbooks", "docs/runbooks"]
+  },
+  "frontmatter": {
+    "fields": [
+      {"name": "title", "type": "string", "required": true, "placeholder": "{{TITLE}}"},
+      {"name": "status", "type": "enum", "required": true, "values": ["active", "deprecated", "draft"]},
+      {"name": "last-verified", "type": "date", "required": true, "placeholder": "{{DATE}}"},
+      {"name": "owner", "type": "string", "required": false, "placeholder": "{{OWNER}}"},
+      {"name": "depends_on", "type": "depends_on", "required": false},
+      {"name": "tags", "type": "array", "required": false},
+      {"name": "tracks", "type": "tracks", "required": true}
+    ]
+  },
+  "sections": {
+    "required": [
+      {"name": "Purpose", "description": "What does this runbook accomplish?"},
+      {"name": "Prerequisites", "description": "What access/tools/state is needed before starting?"},
+      {"name": "Steps", "description": "Ordered procedure to follow"},
+      {"name": "Rollback", "description": "How to undo if something goes wrong"},
+      {"name": "Escalation", "description": "Who to contact and when"}
+    ],
+    "recommended": []
+  },
+  "numbering": {
+    "enabled": false
+  },
+  "template": {
+    "initial_status": "draft",
+    "filename_pattern": "RUNBOOK-{{SLUG}}.md",
+    "heading": "# {{TITLE}}",
+    "tracks_placeholder": "{{TRACKS_PATH}}"
+  }
+}
