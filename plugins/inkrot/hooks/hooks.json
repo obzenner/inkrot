@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run \"${CLAUDE_PLUGIN_ROOT}/scripts/protect_generated.py\""
+            "command": "uv run --script \"${CLAUDE_PLUGIN_ROOT}/scripts/protect_generated.py\""
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run \"${CLAUDE_PLUGIN_ROOT}/scripts/validate.py\" --format json 2>/dev/null || true"
+            "command": "uv run --script \"${CLAUDE_PLUGIN_ROOT}/scripts/validate.py\" --format json 2>/dev/null || true"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run \"${CLAUDE_PLUGIN_ROOT}/scripts/validate.py\" --format hook 2>/dev/null || true"
+            "command": "uv run --script \"${CLAUDE_PLUGIN_ROOT}/scripts/validate.py\" --format hook 2>/dev/null || true"
           }
         ]
       }

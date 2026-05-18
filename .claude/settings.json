@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run scripts/protect_claude_md.py"
+            "command": "uv run --script scripts/protect_claude_md.py"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run scripts/check_freshness.py"
+            "command": "uv run --script scripts/check_freshness.py"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run scripts/check_freshness.py"
+            "command": "uv run --script scripts/check_freshness.py"
           }
         ]
       }

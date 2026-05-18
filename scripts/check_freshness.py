@@ -19,12 +19,12 @@ PLUGIN_ROOT = REPO_ROOT / "plugins" / "inkrot"
 GENERATORS = [
     (
         "plugin skills",
-        [sys.executable, str(PLUGIN_ROOT / "scripts" / "gen_skills.py"), "--dry-run"],
+        ["uv", "run", "--script", str(PLUGIN_ROOT / "scripts" / "gen_skills.py"), "--dry-run"],
         PLUGIN_ROOT,
     ),
     (
         "CLAUDE.md",
-        [sys.executable, str(REPO_ROOT / "scripts" / "gen_claude_md.py"), "--dry-run"],
+        ["uv", "run", "--script", str(REPO_ROOT / "scripts" / "gen_claude_md.py"), "--dry-run"],
         REPO_ROOT,
     ),
 ]
