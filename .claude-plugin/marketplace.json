@@ -7,8 +7,8 @@
   },
   "plugins": [
     {
-      "name": "inkrot",
-      "source": "./plugins/inkrot",
+      "name": "docs-toolkit",
+      "source": "./plugins/docs-toolkit",
       "description": "Schema-driven documentation validation, creation, and migration. Enforces structure via JSON schemas, detects doc rot, and blocks drift with hook-driven enforcement.",
       "category": "quality"
     },

@@ -16,7 +16,7 @@ depends_on:
       - accepted
 tracks:
   - path: .claude/settings.json
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
 ---
 
 # RFC-0008: Hook-Enforced Regeneration and Version Bump
@@ -49,7 +49,7 @@ On session start, run the same check. If the agent enters a session with already
 
 Combines checks across both generators:
 
-1. Run `plugins/inkrot/scripts/gen_skills.py --dry-run` — are plugin-internal files stale?
+1. Run `plugins/docs-toolkit/scripts/gen_skills.py --dry-run` — are plugin-internal files stale?
 2. Run `scripts/gen_claude_md.py --dry-run` — is CLAUDE.md stale?
 3. If anything is stale, check if `plugin.json` version was bumped vs last committed version
 
