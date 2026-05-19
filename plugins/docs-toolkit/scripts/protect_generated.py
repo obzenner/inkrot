@@ -35,7 +35,7 @@ def main():
         sys.exit(0)
 
     path = Path(file_path)
-    plugin_marker = "plugins/inkrot/"
+    plugin_marker = "plugins/docs-toolkit/"
     if plugin_marker not in str(path):
         sys.exit(0)
 

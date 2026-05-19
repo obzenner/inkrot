@@ -9,9 +9,7 @@ informed:
 tags:
 tracks:
   - path: plugins/docs-toolkit/
-    last_verified: "2026-05-12"
-  - path: .docs-toolkit.yml
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
 ---
 
 # Docs Toolkit Plugin

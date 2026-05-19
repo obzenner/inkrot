@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
-PLUGIN_ROOT = REPO_ROOT / "plugins" / "inkrot"
+PLUGIN_ROOT = REPO_ROOT / "plugins" / "docs-toolkit"
 
 
 def load_doc_schemas() -> list[dict]:

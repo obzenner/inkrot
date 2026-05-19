@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
-PLUGIN_ROOT = REPO_ROOT / "plugins" / "inkrot"
+PLUGIN_ROOT = REPO_ROOT / "plugins" / "docs-toolkit"
 
 GENERATORS = [
     (
@@ -41,7 +41,7 @@ def check_stale() -> list[str]:
 
 def get_committed_version() -> str | None:
     result = subprocess.run(
-        ["git", "show", "HEAD:plugins/inkrot/.claude-plugin/plugin.json"],
+        ["git", "show", "HEAD:plugins/docs-toolkit/.claude-plugin/plugin.json"],
         capture_output=True,
         text=True,
         cwd=REPO_ROOT,
@@ -91,13 +91,13 @@ def build_diagnosis() -> list[str]:
         problems.append(
             "Generated files are stale:\n"
             + "\n".join(f"  {s}" for s in stale)
-            + "\n→ Run: uv run plugins/inkrot/scripts/gen_skills.py && uv run scripts/gen_claude_md.py"
+            + "\n→ Run: uv run plugins/docs-toolkit/scripts/gen_skills.py && uv run scripts/gen_claude_md.py"
         )
 
     if source_changed and not version_bumped:
         problems.append(
             f"Source files changed but version is still {current_version}.\n"
-            "→ Bump version in plugins/inkrot/.claude-plugin/plugin.json (PATCH for fixes, MINOR for new content)"
+            "→ Bump version in plugins/docs-toolkit/.claude-plugin/plugin.json (PATCH for fixes, MINOR for new content)"
         )
 
     return problems

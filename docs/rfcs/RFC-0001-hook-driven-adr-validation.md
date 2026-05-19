@@ -12,9 +12,9 @@ depends_on:
       - accepted
 tracks:
   - path: plugins/docs-toolkit/scripts/validate.py
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
   - path: plugins/docs-toolkit/hooks/hooks.json
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
 ---
 
 # RFC-0001: Hook-Driven ADR Validation

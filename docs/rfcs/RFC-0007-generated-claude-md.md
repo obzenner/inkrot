@@ -16,7 +16,7 @@ depends_on:
       - accepted
 tracks:
   - path: scripts/gen_claude_md.py
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
 ---
 
 # RFC-0007: Generated CLAUDE.md with README Symlink
@@ -37,10 +37,10 @@ This is explicitly **not** part of the plugin. The plugin ships to consumers and
 
 | Concern | Location | Purpose |
 |---------|----------|---------|
-| SKILL.md generation | `plugins/inkrot/scripts/gen_skills.py` | Plugin-internal: generates skill files + asset templates from schemas |
+| SKILL.md generation | `plugins/docs-toolkit/scripts/gen_skills.py` | Plugin-internal: generates skill files + asset templates from schemas |
 | CLAUDE.md generation | `scripts/gen_claude_md.py` | Repo-level: generates project docs from schemas + skill templates |
 | Freshness enforcement | `scripts/check_freshness.py` | Repo-level: SessionStart/Stop hook for this repo only |
-| Write protection (plugin) | `plugins/inkrot/scripts/protect_generated.py` | Plugin hook: blocks edits to generated SKILL.md in consumer repos |
+| Write protection (plugin) | `plugins/docs-toolkit/scripts/protect_generated.py` | Plugin hook: blocks edits to generated SKILL.md in consumer repos |
 | Write protection (repo) | `.claude/settings.json` PreToolUse hook | Repo-level: blocks edits to CLAUDE.md in this repo |
 
 ### What CLAUDE.md contains (schema-derived)
@@ -49,7 +49,7 @@ This is explicitly **not** part of the plugin. The plugin ships to consumers and
 |---------|--------|
 | Available document types | All non-skill schemas: type, naming, statuses |
 | Default discovery paths | `discovery.defaults` from each schema |
-| Available skills | Glob `plugins/inkrot/skills/*/SKILL.md.tmpl` — name + description from frontmatter |
+| Available skills | Glob `plugins/docs-toolkit/skills/*/SKILL.md.tmpl` — name + description from frontmatter |
 
 ### What CLAUDE.md contains (static in template)
 
@@ -71,8 +71,8 @@ This is explicitly **not** part of the plugin. The plugin ships to consumers and
 ### gen_claude_md.py
 
 Repo-level script at `scripts/gen_claude_md.py`:
-1. Reads schemas from `plugins/inkrot/schemas/`
-2. Reads skill templates from `plugins/inkrot/skills/*/SKILL.md.tmpl`
+1. Reads schemas from `plugins/docs-toolkit/schemas/`
+2. Reads skill templates from `plugins/docs-toolkit/skills/*/SKILL.md.tmpl`
 3. Renders `CLAUDE.md.tmpl` → `CLAUDE.md`
 4. Supports `--dry-run` (exit 1 if stale)
 

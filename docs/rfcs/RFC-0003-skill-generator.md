@@ -12,9 +12,9 @@ depends_on:
       - accepted
 tracks:
   - path: plugins/docs-toolkit/scripts/
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
   - path: plugins/docs-toolkit/skills/
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
 ---
 
 # RFC-0003: Schema-Driven Validation and Skill Generation

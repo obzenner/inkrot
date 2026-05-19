@@ -9,7 +9,7 @@ informed:
 tags:
 tracks:
   - path: plugins/docs-toolkit/skills/
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
 ---
 
 # Skill Generation from Templates

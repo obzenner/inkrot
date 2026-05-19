@@ -12,7 +12,7 @@ depends_on:
       - accepted
 tracks:
   - path: plugins/docs-toolkit/schemas/
-    last_verified: "2026-05-12"
+    last_verified: "2026-05-19"
 ---
 
 # RFC-0005: Explanation and Reference Document Types
