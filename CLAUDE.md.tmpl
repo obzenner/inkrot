@@ -1,12 +1,16 @@
 # inkrot
 
-Schema-driven documentation validation plugin for Claude Code. Enforces structure, naming, frontmatter, and status lifecycle across {{SCHEMA_COUNT}} document types — all derived from JSON schemas as the single source of truth.
+This repo hosts multiple Claude Code plugins:
+
+- **inkrot** (`plugins/inkrot/`) — Schema-driven documentation validation. Enforces structure, naming, frontmatter, and status lifecycle across {{SCHEMA_COUNT}} document types, all derived from JSON schemas as the single source of truth.
+- **hr** (`plugins/hr/`) — Role profiling for agent configuration. Takes a task description, researches the current market, and produces a professional HR-style competency profile so agents can adopt the right expertise.
 
 ## Installation
 
 ```
 /plugin marketplace add obzenner/inkrot
 /plugin install inkrot@inkrot
+/plugin install inkrot@hr
 ```
 
 ## Document Types

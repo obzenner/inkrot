@@ -1,0 +1,11 @@
+{
+  "name": "hr",
+  "description": "Generates professional competency profiles for AI agent configuration. Analyzes a task description and produces a structured HR-style role profile — title, level, technical skills, domain knowledge, tools, judgment markers — so agents can adopt the right expertise for the job.",
+  "version": "0.1.0",
+  "skills": [
+    "./skills/hr"
+  ],
+  "author": {
+    "name": "obzenner"
+  }
+}
