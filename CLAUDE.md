@@ -3,7 +3,7 @@
 This repo hosts multiple Claude Code plugins:
 
 - **docs-toolkit** (`plugins/docs-toolkit/`) — Schema-driven documentation validation. Enforces structure, naming, frontmatter, and status lifecycle across 8 document types, all derived from JSON schemas as the single source of truth.
-- **hr** (`plugins/hr/`) — Role profiling for agent configuration. Takes a task description, researches the current market, and produces a professional HR-style competency profile so agents can adopt the right expertise.
+- **hr** (`plugins/hr/`) — Role profiling and agent definition generation. Takes a task description, researches the current market, produces a professional HR-style competency profile, and optionally generates a Claude Code agent `.md` file from the profile.
 
 ## Installation
 
@@ -39,11 +39,19 @@ This repo hosts multiple Claude Code plugins:
 
 ## Skills
 
+### docs-toolkit
+
 | Skill | Description |
 |-------|-------------|
 | `create-document` | Create a new documentation file (adr, explanation, learnings, reference, rfc, runbook, spec, tasks) with correct structure, numbering, and frontmatter. Use when the user says "create an ADR", "new decision record", "write an RFC", "new spec", "new runbook", "new task list", "new learning", or any variation of starting a new document. |
 | `docs-migrate` | Migrate existing documentation to docs-toolkit standards. Performs full repository scan, maps every markdown file to a schema, proposes directory structure and migration plan. Use when adopting docs-toolkit in a repo, when asked to "migrate docs", "standardize documentation", "set up docs-toolkit", or "organize docs". |
 | `docs-status` | Change a document's status with enforcement of transition rules. Use when marking an ADR as accepted, superseding a decision, deprecating a runbook, or any status lifecycle change that requires cross-reference integrity. |
+
+### hr
+
+| Skill | Description |
+|-------|-------------|
+| `hr` | Generate a professional competency profile for a task and optionally produce a Claude Code agent definition. Use when asked to "staff this", "build a profile", "create an agent for this", or any role/skill matching to a task description. |
 
 ## Architecture
 
