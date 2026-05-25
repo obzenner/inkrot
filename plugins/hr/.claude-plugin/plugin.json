@@ -1,7 +1,7 @@
 {
   "name": "hr",
-  "description": "Generates professional competency profiles for AI agent configuration. Analyzes a task description and produces a structured HR-style role profile — title, level, technical skills, domain knowledge, tools, judgment markers — so agents can adopt the right expertise for the job.",
-  "version": "0.1.0",
+  "description": "Generates professional competency profiles and Claude Code agent definitions. Analyzes a task description, produces a structured HR-style role profile, and optionally outputs a ready-to-use agent .md file with correct frontmatter and system prompt.",
+  "version": "0.2.0",
   "skills": [
     "./skills/hr"
   ],
