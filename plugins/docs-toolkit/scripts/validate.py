@@ -10,9 +10,13 @@ Usage:
   uv run validate.py [OPTIONS] [PATH...]
 
 Options:
-  --format json|text|hook  Output format (default: json)
-                           hook: wraps text in decision/systemMessage JSON for Stop hooks
+  --format json|text|hook|session  Output format (default: json)
+                           hook:    Stop-gate JSON — block+reason on errors, silent otherwise
+                           session: SessionStart JSON — one-line additionalContext, errors only
   --type TYPE|all          Filter to document type (default: all)
+  --scope all|changed      Limit to docs changed vs HEAD + untracked (default: all)
+  --checks all|cross-file  Which checks to run (default: all)
+                           cross-file: only duplicate-number + dependency-cycle/status gates
   --help                   Show this help
 
 Arguments:
@@ -115,6 +119,21 @@ def last_commit_date(path: str, repo_root: Path) -> str | None:
         capture_output=True, text=True, cwd=repo_root,
     )
     return result.stdout.strip() or None
+
+
+def git_changed_docs(repo_root: Path) -> set[Path]:
+    """Resolved paths of docs changed this session: modified/staged vs HEAD, plus untracked."""
+    def run(args: list[str]) -> list[str]:
+        result = subprocess.run(
+            ["git", *args], capture_output=True, text=True, cwd=repo_root,
+        )
+        return result.stdout.splitlines() if result.returncode == 0 else []
+
+    rels = [
+        *run(["diff", "--name-only", "HEAD"]),
+        *run(["ls-files", "--others", "--exclude-standard"]),
+    ]
+    return {(repo_root / r).resolve() for r in rels if r.strip()}
 
 
 # --- Field type validators ---
@@ -385,7 +404,7 @@ def validate_doc(path: Path, schema: dict) -> FileResult:
     return {"file": str(path), "status": status, "errors": errors, "warnings": warnings}
 
 
-def check_duplicate_numbers(paths: list[Path], schema: dict) -> list[Violation]:
+def check_duplicate_numbers(paths: list[Path], schema: dict, changed: set[Path] | None = None) -> list[Violation]:
     numbering = schema.get("numbering", {})
     if not numbering.get("enabled"):
         return []
@@ -399,16 +418,19 @@ def check_duplicate_numbers(paths: list[Path], schema: dict) -> list[Violation]:
             num = int(match.group(numbering["filename_group"]))
             by_directory.setdefault(path.parent, {}).setdefault(num, []).append(path)
 
+    def involves_changed(ps: list[Path]) -> bool:
+        return changed is None or any(p.resolve() in changed for p in ps)
+
     return [
         {"rule": "numbering.unique", "severity": "error",
          "message": f"Duplicate number {n}: {', '.join(str(p) for p in ps)}"}
         for dir_numbers in by_directory.values()
         for n, ps in dir_numbers.items()
-        if len(ps) > 1
+        if len(ps) > 1 and involves_changed(ps)
     ]
 
 
-def check_dependency_cycles(typed_files: list[tuple[Path, str]]) -> list[Violation]:
+def check_dependency_cycles(typed_files: list[tuple[Path, str]], changed: set[Path] | None = None) -> list[Violation]:
     graph: dict[str, list[str]] = {}
     for path, _ in typed_files:
         content = path.read_text(encoding="utf-8")
@@ -438,11 +460,15 @@ def check_dependency_cycles(typed_files: list[tuple[Path, str]]) -> list[Violati
         stack.discard(node)
         return None
 
+    changed_str = {str(p) for p in changed} if changed is not None else None
+
     visited: set[str] = set()
     for node in graph:
         if node not in visited:
             cycle = find_cycle(node, visited, set())
             if cycle:
+                if changed_str is not None and not any(n in changed_str for n in cycle):
+                    continue
                 short_paths = [Path(p).name for p in cycle]
                 return [{"rule": "depends_on.circular", "severity": "error",
                          "message": f"Circular dependency detected: {' → '.join(short_paths)}"}]
@@ -588,6 +614,17 @@ def format_json(results: list[FileResult], cross_file: list[Violation], discover
     return json.dumps(output, indent=2)
 
 
+def format_errors_only(results: list[FileResult], cross_file: list[Violation]) -> str:
+    """Compact error-only report — no passed roster, no warnings. For push channels."""
+    lines = []
+    for r in results:
+        for v in r["errors"]:
+            lines.append(f"  {r['file']} [{v['rule']}] {v['message']}")
+    for v in cross_file:
+        lines.append(f"  [{v['rule']}] {v['message']}")
+    return "\n".join(lines)
+
+
 def format_text(results: list[FileResult], cross_file: list[Violation], discovery_warnings: list[Violation]) -> str:
     error_count = sum(len(r["errors"]) for r in results) + len(cross_file)
     warning_count = sum(len(r["warnings"]) for r in results) + len(discovery_warnings)
@@ -636,12 +673,24 @@ def format_text(results: list[FileResult], cross_file: list[Violation], discover
 # --- CLI ---
 
 
-def parse_args(argv: list[str], schemas: dict) -> tuple[str, str, list[str]]:
+def parse_args(argv: list[str], schemas: dict) -> tuple[str, str, str, str, list[str]]:
     fmt = "json"
     doc_type = "all"
+    scope = "all"
+    checks = "all"
     paths = []
 
     valid_types = [*schemas.keys(), "all"]
+
+    def take_value(name: str, allowed: tuple[str, ...], i: int) -> str:
+        if i + 1 >= len(argv):
+            print(f"Error: {name} requires a value.", file=sys.stderr)
+            sys.exit(2)
+        value = argv[i + 1]
+        if value not in allowed:
+            print(f"Error: {name} must be one of: {', '.join(allowed)}. Received: \"{value}\"", file=sys.stderr)
+            sys.exit(2)
+        return value
 
     i = 0
     while i < len(argv):
@@ -649,17 +698,20 @@ def parse_args(argv: list[str], schemas: dict) -> tuple[str, str, list[str]]:
         if arg == "--help":
             print(__doc__)
             sys.exit(0)
-        elif arg == "--format" and i + 1 < len(argv):
-            fmt = argv[i + 1]
-            if fmt not in ("json", "text", "hook"):
-                print(f"Error: --format must be one of: json, text, hook. Received: \"{fmt}\"", file=sys.stderr)
-                sys.exit(2)
+        elif arg == "--format":
+            fmt = take_value("--format", ("json", "text", "hook", "session"), i)
             i += 2
         elif arg == "--type" and i + 1 < len(argv):
             doc_type = argv[i + 1]
             if doc_type not in valid_types:
                 print(f"Error: --type must be one of: {', '.join(valid_types)}. Received: \"{doc_type}\"", file=sys.stderr)
                 sys.exit(2)
+            i += 2
+        elif arg == "--scope":
+            scope = take_value("--scope", ("all", "changed"), i)
+            i += 2
+        elif arg == "--checks":
+            checks = take_value("--checks", ("all", "cross-file"), i)
             i += 2
         elif arg.startswith("--"):
             print(f"Error: Unknown option '{arg}'. Run with --help for usage.", file=sys.stderr)
@@ -668,45 +720,64 @@ def parse_args(argv: list[str], schemas: dict) -> tuple[str, str, list[str]]:
             paths.append(arg)
             i += 1
 
-    return fmt, doc_type, paths
+    return fmt, doc_type, scope, checks, paths
 
 
 def main():
     schemas = load_schemas(find_schema_dir())
-    fmt, doc_type, paths = parse_args(sys.argv[1:], schemas)
+    fmt, doc_type, scope, checks, paths = parse_args(sys.argv[1:], schemas)
 
     typed_files, discovery_warnings = resolve_paths(paths, doc_type, schemas)
+
+    # --scope changed: only block on cross-file violations a session-changed doc
+    # participates in. Cross-file checks still run over the FULL set (a duplicate
+    # needs its twin to be detected) but are filtered to those touching `changed`.
+    changed = git_changed_docs(find_repo_root(Path.cwd())) if scope == "changed" else None
+    if scope == "changed" and not (changed & {p.resolve() for p, _ in typed_files}):
+        sys.exit(0)  # no doc touched this session → nothing to gate
 
     if not typed_files and not discovery_warnings:
         sys.exit(0)
 
-    results = [validate_doc(path, schemas[t]) for path, t in typed_files]
+    results = [] if checks == "cross-file" else [validate_doc(path, schemas[t]) for path, t in typed_files]
 
     cross_file = [
         v
         for type_name, schema in schemas.items()
-        for v in check_duplicate_numbers([p for p, t in typed_files if t == type_name], schema)
-    ] + check_dependency_cycles(typed_files)
+        for v in check_duplicate_numbers([p for p, t in typed_files if t == type_name], schema, changed)
+    ] + check_dependency_cycles(typed_files, changed)
 
     error_count = sum(len(r["errors"]) for r in results) + len(cross_file)
     warning_count = sum(len(r["warnings"]) for r in results) + len(discovery_warnings)
 
+    # Push channels (hook, session) are SILENT on success. Pull channels (json,
+    # text) also exit 0 when fully clean, preserving prior behavior.
     if error_count == 0 and warning_count == 0:
         sys.exit(0)
 
     if fmt == "hook":
-        report = format_text(results, cross_file, discovery_warnings)
+        # Stop gate: block on errors with a compact error-only reason; silent on
+        # warnings-only (warnings never push — reach them via the CLI).
         if error_count > 0:
-            output = json.dumps({
+            print(json.dumps({
                 "decision": "block",
-                "reason": "Documentation validation failed. Fix the errors below before continuing.",
-                "systemMessage": report,
-            })
-        else:
-            output = json.dumps({
-                "systemMessage": report,
-            })
-        print(output)
+                "reason": "Documentation validation failed. Fix these before continuing:\n"
+                          + format_errors_only(results, cross_file),
+            }))
+        sys.exit(0)
+    elif fmt == "session":
+        # SessionStart: one-line awareness, errors only. additionalContext is
+        # fed to Claude (not the user); suppressOutput hides any stray stdout.
+        if error_count > 0:
+            line = f"docs-toolkit: {len(typed_files)} docs, {error_count} error(s). Run `validate.py` for detail."
+            print(json.dumps({
+                "suppressOutput": True,
+                "hookSpecificOutput": {
+                    "hookEventName": "SessionStart",
+                    "additionalContext": line,
+                },
+            }))
+        sys.exit(0)
     else:
         report = format_json(results, cross_file, discovery_warnings) if fmt == "json" else format_text(results, cross_file, discovery_warnings)
         print(report)
