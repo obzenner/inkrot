@@ -11,12 +11,23 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --script \"${CLAUDE_PLUGIN_ROOT}/scripts/posttool_validate.py\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script \"${CLAUDE_PLUGIN_ROOT}/scripts/validate.py\" --format json 2>/dev/null || true"
+            "command": "uv run --script \"${CLAUDE_PLUGIN_ROOT}/scripts/validate.py\" --format session 2>/dev/null || true"
           }
         ]
       }
@@ -26,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script \"${CLAUDE_PLUGIN_ROOT}/scripts/validate.py\" --format hook 2>/dev/null || true"
+            "command": "uv run --script \"${CLAUDE_PLUGIN_ROOT}/scripts/validate.py\" --format hook --scope changed --checks cross-file 2>/dev/null || true"
           }
         ]
       }
