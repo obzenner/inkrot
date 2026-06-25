@@ -43,20 +43,30 @@ def main() -> None:
         sys.exit(0)
 
     validate_py = Path(__file__).parent / "validate.py"
-    # Full deterministic check, scoped to docs changed this session (git-based → catches
-    # Bash-written files). `--format hook` emits a `decision: block` + reason ONLY on errors;
-    # it is silent on warnings-only and on a clean tree.
+    # Full deterministic check, scoped to docs changed vs HEAD (git-based → catches
+    # Bash-written files too). `--format text` gives the human-readable error list; we shape
+    # it into a NON-BLOCKING advisory below.
     result = subprocess.run(
         ["uv", "run", "--script", str(validate_py),
-         "--format", "hook", "--scope", "changed"],
+         "--format", "text", "--scope", "changed"],
         capture_output=True, text=True,
     )
 
-    # validate.py --format hook prints the block-JSON on stdout (or nothing). Pass it
-    # through verbatim; swallow any stderr/diagnostics so a tooling hiccup never blocks.
-    out = result.stdout.strip()
-    if out:
-        print(out)
+    # The Stop gate INFORMS — it does NOT block. Why not `decision: block`:
+    # `--scope changed` is `git diff HEAD`, which cannot distinguish THIS session's edits from
+    # a COLLABORATOR's uncommitted work-in-progress in a shared tree. A hard block on drift the
+    # current turn did not author wedges every agent's turn on someone else's migration — the
+    # over-gate failure this plugin exists to avoid, relocated to the turn boundary. At Stop,
+    # the change is not attributable, so we fail OPEN: surface the findings as a non-blocking
+    # `systemMessage` (the agent and user see it and can act) and let the turn close. Hard,
+    # attributable enforcement of doc drift belongs at commit time or in CI — not at every
+    # turn boundary. (`reset --hard` of this stance would be wrong; see RFC-0009 §Resolution.)
+    if result.returncode == 1 and result.stdout.strip():
+        print(json.dumps({
+            "systemMessage": "docs-toolkit (advisory — not blocking): documentation drift "
+                             "in changed docs. Resolve before commit, or supersede the doc:\n"
+                             + result.stdout.strip()
+        }))
     sys.exit(0)
 
 
