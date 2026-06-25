@@ -38,5 +38,6 @@
     "filename_pattern": "RUNBOOK-{{SLUG}}.md",
     "heading": "# {{TITLE}}",
     "tracks_placeholder": "{{TRACKS_PATH}}"
-  }
+  },
+  "terminal_statuses": ["deprecated"]
 }

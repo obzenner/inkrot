@@ -43,5 +43,6 @@
     "filename_pattern": "{{NUMBER}}-{{SLUG}}.md",
     "heading": "# {{TITLE}}",
     "tracks_placeholder": "{{TRACKS_PATH}}"
-  }
+  },
+  "terminal_statuses": ["deprecated", "superseded", "rejected"]
 }

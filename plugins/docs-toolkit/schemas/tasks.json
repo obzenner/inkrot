@@ -34,5 +34,6 @@
     "filename_pattern": "TASK-{{SLUG}}.md",
     "heading": "# {{TITLE}}",
     "tracks_placeholder": "{{TRACKS_PATH}}"
-  }
+  },
+  "terminal_statuses": ["completed", "abandoned"]
 }

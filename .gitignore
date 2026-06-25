@@ -1,0 +1,11 @@
+# Python build artifacts (scripts run via `uv run`)
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# uv / venv
+.venv/
+
+# OS / editor cruft
+.DS_Store
