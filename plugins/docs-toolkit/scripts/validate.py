@@ -326,13 +326,15 @@ def check_depends_on(meta: dict, base_dir: Path) -> list[Violation]:
     return [v for entry in deps for v in validate_single_dependency(entry, base_dir)]
 
 
-def validate_single_track(entry: dict, repo_root: Path, *, skip_stale: bool = False) -> list[Violation]:
+def validate_single_track(entry: dict, repo_root: Path, *, skip_drift: bool = False) -> list[Violation]:
     if not isinstance(entry, dict):
         return []
 
     path_str = entry.get("path", "")
     verified = entry.get("last_verified", "")
 
+    # AUTHORING-correctness checks (path-format, no-date) are TIMELESS — a malformed track
+    # entry is wrong regardless of the doc's lifecycle, so these fire even on terminal docs.
     if not path_str or path_str.startswith("/") or ".." in path_str:
         return [{"rule": "tracks.path-format", "severity": "error",
                  "message": f"Invalid track path: '{path_str}' — must be relative, no leading / or .."}]
@@ -340,6 +342,14 @@ def validate_single_track(entry: dict, repo_root: Path, *, skip_stale: bool = Fa
     if not verified:
         return [{"rule": "tracks.no-date", "severity": "error",
                  "message": f"Track entry '{path_str}' missing last_verified date"}]
+
+    # "THE-WORLD-CHANGED-UNDER-THIS-DOC" checks (path-missing, stale) do NOT apply to a
+    # terminal-status doc (RFC-0009): a superseded/deprecated/rejected decision is a historical
+    # record, and the code it described is *supposed* to be gone or renamed — that is what
+    # superseding means. Flagging its dangling reference or its age is the same "old ≠ wrong"
+    # category error for which `stale` was demoted. The caller passes `skip_drift` for those.
+    if skip_drift:
+        return []
 
     target = repo_root / path_str
     if not target.exists():
@@ -350,10 +360,7 @@ def validate_single_track(entry: dict, repo_root: Path, *, skip_stale: bool = Fa
     # file's commit being newer than `last_verified` fires on refactors, renames, and bulk
     # re-stamps that never touched the decision. So it is a WARNING (a "you may want to
     # re-verify" nudge), never an error that blocks — a 0.6%-precision error gate just trains
-    # users to bump the date to silence it. Terminal-status docs skip it entirely (a dead
-    # decision cannot drift); the caller passes `skip_stale` for those.
-    if skip_stale:
-        return []
+    # users to bump the date to silence it.
     commit_date = last_commit_date(path_str, repo_root)
     if commit_date and commit_date > str(verified):
         return [{"rule": "tracks.stale", "severity": "warning",
@@ -373,6 +380,11 @@ def is_terminal_status(meta: dict, schema: dict) -> bool:
     return str(meta.get("status", "")).lower() in terminal
 
 
+# (status-lifecycle aside: the supersede-link integrity check that would replace the
+# path-missing signal for terminal docs is RFC-0009 Slice 2; until then, a terminal doc is
+# trusted to be a historical record.)
+
+
 def check_tracks(meta: dict, repo_root: Path, schema: dict) -> list[Violation]:
     if "tracks" not in meta:
         return [{"rule": "tracks.required", "severity": "error",
@@ -383,10 +395,11 @@ def check_tracks(meta: dict, repo_root: Path, schema: dict) -> list[Violation]:
         return [{"rule": "tracks.empty", "severity": "error",
                  "message": "tracks field is empty. Declare at least one path to track."}]
 
-    # Path-format / missing-date / missing-path are still enforced (a malformed track entry is
-    # always an error); only the AGE check is skipped for terminal-status docs.
-    skip_stale = is_terminal_status(meta, schema)
-    return [v for entry in tracks for v in validate_single_track(entry, repo_root, skip_stale=skip_stale)]
+    # Authoring checks (path-format, missing-date) always fire; the drift checks (path-missing,
+    # stale) are skipped for terminal-status docs — a closed decision's code is *meant* to be
+    # gone, so a dangling reference is expected, not a defect.
+    skip_drift = is_terminal_status(meta, schema)
+    return [v for entry in tracks for v in validate_single_track(entry, repo_root, skip_drift=skip_drift)]
 
 
 # --- Validation pipeline ---

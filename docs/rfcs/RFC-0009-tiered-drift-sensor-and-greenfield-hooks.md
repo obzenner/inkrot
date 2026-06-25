@@ -219,16 +219,36 @@ conformance via resolvable anchors — not the proxy it replaced.
    signal, not age noise. All remaining `tracks.stale` are now warnings; the SessionStart
    one-liner went from "178 error(s)" to "39 error(s)". No regression: the 39 `path-missing`
    errors predate this change (they were masked by the stale wall).
-2. **Slice 3 (greenfield Stop gate) — DONE.** New `stop_gate.py` wraps `validate.py
-   --format hook --scope changed`: (a) blocks only on deterministic errors in docs *changed
-   this session* (git-detected → catches Bash-written docs the `Edit|Write` matcher misses),
-   (b) never blocks on `tracks.stale` warnings, (c) guards the 8-block cap via
-   `stop_hook_active`. `--scope changed` now also filters *per-doc* results (previously only
-   the cross-file gate), so a pre-existing error in an untouched doc no longer blocks every
-   turn. Five behavioral tests pass (stale-silent, stale-as-warning, error-blocks,
-   loop-guard-silent, unchanged-doc-silent). `hooks.json` Stop now calls `stop_gate.py`.
-   Plugin bumped 0.5.0 → 0.6.0 (MINOR) and the manifest description corrected
-   ("blocks drift" → "blocks deterministic errors; staleness is advisory").
+2. **Slice 3 (greenfield Stop gate) — DONE, then CORRECTED (0.6.1).** New `stop_gate.py`
+   wraps `validate.py --scope changed` (git-detected → catches Bash-written docs the
+   `Edit|Write` matcher misses) and guards the 8-block cap via `stop_hook_active`.
+   `--scope changed` also filters *per-doc* results so an untouched doc's pre-existing error
+   never re-fires.
+
+   **Two corrections came from dogfooding 0.6.0 against a real multi-author tree (a
+   collaborator's mid-migration reasa checkout), caught in a clean worktree:**
+
+   - **(a) Terminal docs must skip `path-missing`, not just `stale`.** 0.6.0 exempted
+     terminal-status docs from the *age* check but still errored on a dangling path. A
+     superseded ADR's code is *supposed* to be gone — that is what superseding means — so a
+     dangling reference is expected, not a defect. The same "old ≠ wrong" category error,
+     one level deeper. Fix: terminal docs skip BOTH drift checks (`stale` + `path-missing`),
+     keep the *authoring* checks (`path-format`, `no-date`) which are timeless. Flag renamed
+     `skip_stale` → `skip_drift`.
+   - **(b) The Stop gate must INFORM, not BLOCK.** This is the load-bearing reversal of the
+     original design. `--scope changed` is `git diff HEAD`, which cannot distinguish *this*
+     session's edits from a *collaborator's* uncommitted WIP in a shared tree. A
+     `decision: block` on drift the current turn did not author wedges every agent's turn on
+     someone else's migration — the over-gate failure this RFC exists to kill, relocated to
+     the turn boundary. At Stop the change is **not attributable**, so the gate now fails
+     OPEN: surfaces findings as a non-blocking `systemMessage` and lets the turn close. Hard,
+     attributable enforcement of doc drift belongs at **commit-time / CI**, not at every turn
+     boundary. (Proven side-by-side on the real dirty tree: 0.6.0 emits `block` and wedges the
+     turn; 0.6.1 emits an advisory and the turn closes, drift still surfaced.)
+
+   `hooks.json` Stop calls `stop_gate.py`. Plugin 0.5.0 → 0.6.0 → **0.6.1** (the fix is a
+   PATCH: a behavior correction, no new surface). Manifest description updated to
+   "surfaces drift as a non-blocking advisory at the turn boundary; hard enforcement at CI."
 3. **Slice 2 — DEFERRED (open):** symbol-anchored references (`symbol:` track key +
    `tree-sitter` resolver) and the public-surface candidate gate. The `path-missing` check is
    the file-granularity proto-version already landed; symbol-granularity is the next step.

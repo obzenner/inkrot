@@ -1,7 +1,7 @@
 {
   "name": "docs-toolkit",
-  "description": "Schema-driven documentation validation, creation, and migration. Enforces structure via JSON schemas and blocks deterministic errors (broken references, malformed frontmatter) at the turn boundary; surfaces age-based staleness as an advisory warning rather than a block. Supports ADRs, RFCs, specs, runbooks, tasks, learnings, explanations, and references.",
-  "version": "0.6.0",
+  "description": "Schema-driven documentation validation, creation, and migration. Enforces document structure via JSON schemas and surfaces code-reference drift in changed docs as a non-blocking advisory at the turn boundary (hard enforcement belongs at commit/CI, where the change is attributable); age-based staleness is advisory, and terminal-status docs are exempt from drift checks. Supports ADRs, RFCs, specs, runbooks, tasks, learnings, explanations, and references.",
+  "version": "0.6.1",
   "author": {
     "name": "obzenner"
   }
