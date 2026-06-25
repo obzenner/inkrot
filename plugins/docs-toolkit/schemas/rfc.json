@@ -40,5 +40,6 @@
     "filename_pattern": "RFC-{{NUMBER}}-{{SLUG}}.md",
     "heading": "# RFC-{{NUMBER}}: {{TITLE}}",
     "tracks_placeholder": "{{TRACKS_PATH}}"
-  }
+  },
+  "terminal_statuses": ["rejected", "withdrawn"]
 }

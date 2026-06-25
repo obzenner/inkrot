@@ -37,5 +37,6 @@
     "filename_pattern": "SPEC-{{SLUG}}.md",
     "heading": "# {{TITLE}}",
     "tracks_placeholder": "{{TRACKS_PATH}}"
-  }
+  },
+  "terminal_statuses": ["abandoned"]
 }

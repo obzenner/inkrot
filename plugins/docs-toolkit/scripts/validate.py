@@ -326,7 +326,7 @@ def check_depends_on(meta: dict, base_dir: Path) -> list[Violation]:
     return [v for entry in deps for v in validate_single_dependency(entry, base_dir)]
 
 
-def validate_single_track(entry: dict, repo_root: Path) -> list[Violation]:
+def validate_single_track(entry: dict, repo_root: Path, *, skip_stale: bool = False) -> list[Violation]:
     if not isinstance(entry, dict):
         return []
 
@@ -346,15 +346,34 @@ def validate_single_track(entry: dict, repo_root: Path) -> list[Violation]:
         return [{"rule": "tracks.path-missing", "severity": "error",
                  "message": f"Tracked path does not exist: '{path_str}'"}]
 
+    # `tracks.stale` is age, and age is a PROXY for drift, not drift (RFC-0009): a tracked
+    # file's commit being newer than `last_verified` fires on refactors, renames, and bulk
+    # re-stamps that never touched the decision. So it is a WARNING (a "you may want to
+    # re-verify" nudge), never an error that blocks — a 0.6%-precision error gate just trains
+    # users to bump the date to silence it. Terminal-status docs skip it entirely (a dead
+    # decision cannot drift); the caller passes `skip_stale` for those.
+    if skip_stale:
+        return []
     commit_date = last_commit_date(path_str, repo_root)
     if commit_date and commit_date > str(verified):
-        return [{"rule": "tracks.stale", "severity": "error",
-                 "message": f"'{path_str}' has commits after last_verified ({verified}). Last commit: {commit_date}"}]
+        return [{"rule": "tracks.stale", "severity": "warning",
+                 "message": f"'{path_str}' has commits after last_verified ({verified}). "
+                            f"Last commit: {commit_date}. Re-verify the doc still matches, "
+                            f"then bump last_verified — or supersede/deprecate it."}]
 
     return []
 
 
-def check_tracks(meta: dict, repo_root: Path) -> list[Violation]:
+def is_terminal_status(meta: dict, schema: dict) -> bool:
+    """A doc whose status is terminal — superseded/deprecated/rejected/archived/etc. — is a
+    closed decision (RFC-0009). Its tracked code keeps evolving, but the doc is a true
+    historical record, not live documentation, so it cannot 'drift'. Such docs are exempt
+    from the `tracks.stale` age check (they would otherwise be flagged forever)."""
+    terminal = {s.lower() for s in schema.get("terminal_statuses", [])}
+    return str(meta.get("status", "")).lower() in terminal
+
+
+def check_tracks(meta: dict, repo_root: Path, schema: dict) -> list[Violation]:
     if "tracks" not in meta:
         return [{"rule": "tracks.required", "severity": "error",
                  "message": "Missing required field: tracks. Every document must declare what it tracks."}]
@@ -364,7 +383,10 @@ def check_tracks(meta: dict, repo_root: Path) -> list[Violation]:
         return [{"rule": "tracks.empty", "severity": "error",
                  "message": "tracks field is empty. Declare at least one path to track."}]
 
-    return [v for entry in tracks for v in validate_single_track(entry, repo_root)]
+    # Path-format / missing-date / missing-path are still enforced (a malformed track entry is
+    # always an error); only the AGE check is skipped for terminal-status docs.
+    skip_stale = is_terminal_status(meta, schema)
+    return [v for entry in tracks for v in validate_single_track(entry, repo_root, skip_stale=skip_stale)]
 
 
 # --- Validation pipeline ---
@@ -394,7 +416,7 @@ def validate_doc(path: Path, schema: dict) -> FileResult:
         *check_sections(headings, schema),
         *check_subtypes(meta, headings, schema),
         *check_depends_on(meta, path.parent),
-        *check_tracks(meta, repo_root),
+        *check_tracks(meta, repo_root, schema),
     ]
 
     errors = [v for v in checks if v["severity"] != "warning"]
@@ -739,7 +761,16 @@ def main():
     if not typed_files and not discovery_warnings:
         sys.exit(0)
 
-    results = [] if checks == "cross-file" else [validate_doc(path, schemas[t]) for path, t in typed_files]
+    # Per-doc checks honor --scope: with `changed`, validate ONLY the docs touched this
+    # session (RFC-0009 Stop gate verifies what the turn changed, not the whole corpus — a
+    # pre-existing error in an untouched doc must not block every turn). Cross-file checks
+    # below still run over the full set, then filter to `changed`, because a duplicate needs
+    # its twin to be seen.
+    per_doc_files = (
+        [(p, t) for p, t in typed_files if changed is None or p.resolve() in changed]
+        if scope == "changed" else typed_files
+    )
+    results = [] if checks == "cross-file" else [validate_doc(path, schemas[t]) for path, t in per_doc_files]
 
     cross_file = [
         v
