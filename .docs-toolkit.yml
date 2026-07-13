@@ -1,0 +1,13 @@
+# docs-toolkit adoption marker for the inkrot repo.
+#
+# Its PRESENCE opts this repo into the automatic hook channels (SessionStart,
+# PostToolUse, Stop). Without it the hooks stay dormant — see is_activated() in
+# plugins/docs-toolkit/scripts/validate.py.
+#
+# Each key maps a document type to the directories that hold it. Only declare
+# dirs that exist here; undeclared default dirs surface as discovery warnings.
+paths:
+  decisions:
+    - docs/decisions
+  rfcs:
+    - docs/rfcs

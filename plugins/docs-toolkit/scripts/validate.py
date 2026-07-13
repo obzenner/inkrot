@@ -17,6 +17,10 @@ Options:
   --scope all|changed      Limit to docs changed vs HEAD + untracked (default: all)
   --checks all|cross-file  Which checks to run (default: all)
                            cross-file: only duplicate-number + dependency-cycle/status gates
+  --require-activation     Exit 0 silently unless the target repo has opted in
+                           (a .docs-toolkit.yml at its root). For automatic hook
+                           channels only — keeps the plugin dormant in repos that
+                           never adopted docs-toolkit. CLI use omits this flag.
   --help                   Show this help
 
 Arguments:
@@ -53,6 +57,18 @@ FileResult: TypeAlias = dict[str, str | list[Violation]]
 # --- Schema loading ---
 
 CONFIG_FILENAME = ".docs-toolkit.yml"
+
+
+def is_activated(root: Path) -> bool:
+    """A repo has opted into docs-toolkit iff it carries the config marker at its root.
+
+    The plugin's hooks run in EVERY session in EVERY repo (that is how installed Claude
+    Code plugins work). Without this gate, the automatic channels (SessionStart, PostToolUse,
+    Stop) fire in any repo that merely HAS a default-named doc dir (`specs`, `docs/decisions`,
+    `rfcs`, ...) and inject docs-toolkit findings into unrelated projects. `.docs-toolkit.yml`
+    is the adoption artifact — the docs-migrate skill writes it when a repo adopts the toolkit —
+    so its presence is the opt-in signal. Absence → the hook stays silent."""
+    return (find_repo_root(root) / CONFIG_FILENAME).exists()
 
 
 def find_schema_dir() -> Path:
@@ -708,11 +724,12 @@ def format_text(results: list[FileResult], cross_file: list[Violation], discover
 # --- CLI ---
 
 
-def parse_args(argv: list[str], schemas: dict) -> tuple[str, str, str, str, list[str]]:
+def parse_args(argv: list[str], schemas: dict) -> tuple[str, str, str, str, bool, list[str]]:
     fmt = "json"
     doc_type = "all"
     scope = "all"
     checks = "all"
+    require_activation = False
     paths = []
 
     valid_types = [*schemas.keys(), "all"]
@@ -748,6 +765,9 @@ def parse_args(argv: list[str], schemas: dict) -> tuple[str, str, str, str, list
         elif arg == "--checks":
             checks = take_value("--checks", ("all", "cross-file"), i)
             i += 2
+        elif arg == "--require-activation":
+            require_activation = True
+            i += 1
         elif arg.startswith("--"):
             print(f"Error: Unknown option '{arg}'. Run with --help for usage.", file=sys.stderr)
             sys.exit(2)
@@ -755,12 +775,21 @@ def parse_args(argv: list[str], schemas: dict) -> tuple[str, str, str, str, list
             paths.append(arg)
             i += 1
 
-    return fmt, doc_type, scope, checks, paths
+    return fmt, doc_type, scope, checks, require_activation, paths
 
 
 def main():
     schemas = load_schemas(find_schema_dir())
-    fmt, doc_type, scope, checks, paths = parse_args(sys.argv[1:], schemas)
+    fmt, doc_type, scope, checks, require_activation, paths = parse_args(sys.argv[1:], schemas)
+
+    # Opt-in gate (hook channels only): stay silent unless the target repo adopted
+    # docs-toolkit. Repo root is resolved from the first target path when given (PostToolUse
+    # passes the edited file), else from cwd (SessionStart / Stop). CLI use omits the flag,
+    # so `validate.py` still runs anywhere on demand.
+    if require_activation:
+        probe = Path(paths[0]).parent if paths else Path.cwd()
+        if not is_activated(probe):
+            sys.exit(0)
 
     typed_files, discovery_warnings = resolve_paths(paths, doc_type, schemas)
 
