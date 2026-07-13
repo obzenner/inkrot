@@ -48,7 +48,7 @@ def main() -> None:
     # it into a NON-BLOCKING advisory below.
     result = subprocess.run(
         ["uv", "run", "--script", str(validate_py),
-         "--format", "text", "--scope", "changed"],
+         "--format", "text", "--scope", "changed", "--require-activation"],
         capture_output=True, text=True,
     )
 

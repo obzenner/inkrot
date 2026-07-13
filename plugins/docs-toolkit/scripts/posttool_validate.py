@@ -32,7 +32,7 @@ def main():
 
     validate_py = Path(__file__).parent / "validate.py"
     result = subprocess.run(
-        ["uv", "run", "--script", str(validate_py), file_path, "--format", "text"],
+        ["uv", "run", "--script", str(validate_py), file_path, "--format", "text", "--require-activation"],
         capture_output=True, text=True,
     )
 
