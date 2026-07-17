@@ -603,7 +603,30 @@ def classify_file(path: Path, schemas: dict) -> str | None:
     return None
 
 
-def resolve_paths(args: list[str], type_filter: str, schemas: dict) -> tuple[list[tuple[Path, str]], list[Violation]]:
+def classify_tracked(path: Path, schemas: dict) -> str | None:
+    """Return the doc type this file is TRACKED as, or None if the plugin does not track it.
+
+    A file is a tracked doc iff it lives DIRECTLY inside one of a type's discovery directories
+    (config-or-default). Directory membership — not the filename pattern — is the discriminator,
+    exactly as the full-scan path types every `.md` in a discovery dir. This is deliberate:
+      - It stays SILENT on unrelated `.md` (`src/button-notes.md`, root `README.md`) that the
+        old pattern-only classification force-mapped to a type (`explanation`/`reference` match
+        any lowercase-kebab name; a non-match fell back to the first schema, `adr`).
+      - It STILL flags a misnamed doc dropped in a tracked dir (`specs/notes.md`) with its
+        naming violation — matching what SessionStart/Stop report, so the channels agree.
+
+    Unlike `classify_file`, there is NO fallback: a file outside every discovery directory
+    returns None and is left alone."""
+    resolved_parent = path.resolve().parent
+    root = find_repo_root(path.parent)
+    for type_name, schema in schemas.items():
+        tracked_dirs = {(root / d).resolve() for d in load_directories(root, schema)}
+        if resolved_parent in tracked_dirs:
+            return type_name
+    return None
+
+
+def resolve_paths(args: list[str], type_filter: str, schemas: dict, tracked_only: bool = False) -> tuple[list[tuple[Path, str]], list[Violation]]:
     if not args:
         root = Path.cwd()
         all_files = []
@@ -622,6 +645,15 @@ def resolve_paths(args: list[str], type_filter: str, schemas: dict) -> tuple[lis
     for arg in args:
         p = Path(arg)
         if p.is_file():
+            # tracked_only (hook channels): classify by pattern AND discovery-directory
+            # membership, with no fallback — a file the plugin does not track is skipped, so the
+            # automatic hooks never fire on unrelated `.md`. CLI use (tracked_only=False) keeps
+            # the permissive behavior: pattern match, then --type override, then first schema.
+            if tracked_only:
+                doc_type = classify_tracked(p, schemas)
+                if doc_type and (type_filter == "all" or type_filter == doc_type):
+                    files.append((p, doc_type))
+                continue
             doc_type = classify_file(p, schemas)
             if doc_type and (type_filter == "all" or type_filter == doc_type):
                 files.append((p, doc_type))
@@ -791,7 +823,10 @@ def main():
         if not is_activated(probe):
             sys.exit(0)
 
-    typed_files, discovery_warnings = resolve_paths(paths, doc_type, schemas)
+    # Hook channels pass --require-activation; that same flag means "only touch docs the plugin
+    # tracks" — an explicit file path is classified by pattern AND discovery-directory membership,
+    # never force-classified. CLI use (no flag) stays permissive so `validate.py <anyfile>` works.
+    typed_files, discovery_warnings = resolve_paths(paths, doc_type, schemas, tracked_only=require_activation)
 
     # --scope changed: only block on cross-file violations a session-changed doc
     # participates in. Cross-file checks still run over the FULL set (a duplicate

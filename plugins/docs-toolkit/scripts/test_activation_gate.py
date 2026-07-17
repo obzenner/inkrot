@@ -62,6 +62,26 @@ def run_hooks(root: Path) -> dict[str, str]:
     }
 
 
+def make_scope_repo(root: Path) -> None:
+    """Adopted repo with an unrelated `.md` OUTSIDE every discovery dir plus a real tracked doc."""
+    (root / "src").mkdir(parents=True)
+    (root / "src" / "button-notes.md").write_text("# Button notes\n\nplain notes\n")
+    (root / "README.md").write_text("# Readme\n\nhello\n")
+    (root / "specs").mkdir(parents=True)
+    (root / "specs" / "SPEC-real.md").write_text("# Real spec\n\nno frontmatter\n")
+    (root / ".docs-toolkit.yml").write_text(MARKER)
+    sh(["git", "init", "-q"], root)
+    sh(["git", "config", "user.email", "t@t.co"], root)
+    sh(["git", "config", "user.name", "t"], root)
+    sh(["git", "add", "-A"], root)
+    sh(["git", "commit", "-qm", "init"], root)
+
+
+def posttool_on(root: Path, rel: str) -> str:
+    return sh(["uv", "run", "--script", str(POSTTOOL)], root,
+              stdin=json.dumps({"tool_input": {"file_path": str(root / rel)}})).stdout.strip()
+
+
 def main() -> None:
     failures: list[str] = []
 
@@ -71,6 +91,19 @@ def main() -> None:
         for channel, out in run_hooks(foreign).items():
             if out:
                 failures.append(f"LEAK: {channel} emitted output in a repo with no marker:\n{out}")
+
+    # PostToolUse must scope to TRACKED docs even inside an adopted repo: an edit to an `.md`
+    # outside every discovery dir is not the plugin's business (the "spying on unrelated md"
+    # noise), while a real tracked doc still gets validated.
+    with tempfile.TemporaryDirectory() as tmp:
+        scoped = Path(tmp) / "scoped"
+        make_scope_repo(scoped)
+        for rel in ("src/button-notes.md", "README.md"):
+            out = posttool_on(scoped, rel)
+            if out:
+                failures.append(f"NOISE: PostToolUse fired on untracked '{rel}' in an adopted repo:\n{out}")
+        if not posttool_on(scoped, "specs/SPEC-real.md"):
+            failures.append("SILENT: PostToolUse ignored a real tracked doc (specs/SPEC-real.md)")
 
     with tempfile.TemporaryDirectory() as tmp:
         adopted = Path(tmp) / "adopted"
@@ -91,7 +124,7 @@ def main() -> None:
     if failures:
         print("FAIL\n" + "\n".join(f"  - {f}" for f in failures))
         sys.exit(1)
-    print("PASS: hooks dormant without marker, active with marker, CLI ungated.")
+    print("PASS: hooks dormant without marker, active with marker, scoped to tracked docs, CLI ungated.")
 
 
 if __name__ == "__main__":
